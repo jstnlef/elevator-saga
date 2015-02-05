@@ -3,21 +3,33 @@
     init: function (elevators, floors) {
         var floors_requested = [];
 
+        var goToFloorWithIndicator = function (elevator, floor) {
+            current = elevator.currentFloor();
+            if (floor >= current) {
+                elevator.goingUpIndicator(true);
+                elevator.goingDownIndicator(false);
+            } else {
+                elevator.goingDownIndicator(true);
+                elevator.goingUpIndicator(false);
+            }
+            elevator.goToFloor(floor);
+        };
+
         elevators.forEach(function (elevator) {
             elevator.on("idle", function() {
-                if (floors_requested.length > 0) {
-                    elevator.goToFloor(floors_requested.shift());
-                } else {
-                    elevator.goToFloor(0);
-                }
+                goToFloorWithIndicator(elevator, 0);
             });
 
             elevator.on("stopped_at_floor", function(floorNum) {
-
+                if (floors_requested.length > 0) {
+                    goToFloorWithIndicator(elevator, floors_requested.shift());
+                } else {
+                    goToFloorWithIndicator(elevator, 0);
+                }
             });
 
             elevator.on("floor_button_pressed", function(floorNum) {
-                elevator.destinationQueue.push(floorNum);
+                goToFloorWithIndicator(elevator, floorNum);
             });
         });
 
