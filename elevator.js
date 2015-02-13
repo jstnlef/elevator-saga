@@ -1,44 +1,74 @@
 // Solution for elevator saga
 {
     init: function (elevators, floors) {
-        var floors_requested = [];
-
-        var goToFloorWithIndicator = function (elevator, floor) {
-            current = elevator.currentFloor();
-            if (floor >= current) {
-                elevator.goingUpIndicator(true);
-                elevator.goingDownIndicator(false);
-            } else {
-                elevator.goingDownIndicator(true);
-                elevator.goingUpIndicator(false);
-            }
-            elevator.goToFloor(floor);
+        var direction = {
+            UP: "up",
+            DOWN: "down",
+            NONE: "none",
+            BOTH: "both"
         };
+        Object.freeze(direction);
+
+        var upFloors = [];
+        var downFloors = [];
 
         elevators.forEach(function (elevator) {
+
+            elevator.setIndicator = function (dir) {
+                if (dir === direction.UP) {
+                    elevator.goingUpIndicator(true);
+                    elevator.goingDownIndicator(false);
+                } else if (dir === direction.DOWN) {
+                    elevator.goingUpIndicator(false);
+                    elevator.goingDownIndicator(true);
+                } else if (dir === direction.BOTH){
+                    elevator.goingUpIndicator(true);
+                    elevator.goingDownIndicator(true);
+                } else {
+                    elevator.goingUpIndicator(false);
+                    elevator.goingDownIndicator(false);
+                }
+
+            };
+
+            elevator.goToFloorWithIndicator = function (floor) {
+                current = elevator.currentFloor();
+                if (floor >= current) {
+                    elevator.setIndicator(direction.UP);
+                } else {
+                    elevator.setIndicator(direction.DOWN);
+                }
+                elevator.goToFloor(floor);
+            };
+
             elevator.on("idle", function() {
-                goToFloorWithIndicator(elevator, 0);
+
             });
 
             elevator.on("stopped_at_floor", function(floorNum) {
-                if (floors_requested.length > 0) {
-                    goToFloorWithIndicator(elevator, floors_requested.shift());
+                console.log("Destination queue: " + elevator.destinationQueue);
+                console.log("upFloors queue: " + upFloors);
+                console.log("downFloors queue: " + downFloors);
+                if (upFloors.length > 0) {
+                    elevator.goToFloorWithIndicator(upFloors.shift());
+                } else if (downFloors.length > 0){
+                    elevator.goToFloorWithIndicator(downFloors.shift());
                 } else {
-                    goToFloorWithIndicator(elevator, 0);
+                    elevator.goToFloorWithIndicator(0);
                 }
             });
 
             elevator.on("floor_button_pressed", function(floorNum) {
-                goToFloorWithIndicator(elevator, floorNum);
+                elevator.goToFloorWithIndicator(floorNum);
             });
         });
 
         floors.forEach(function (floor) {
             floor.on("up_button_pressed", function() {
-                floors_requested.push(floor.floorNum());
+                upFloors.push(floor.floorNum());
             });
             floor.on("down_button_pressed", function() {
-                floors_requested.push(floor.floorNum());
+                downFloors.push(floor.floorNum());
             });
         });
     },
