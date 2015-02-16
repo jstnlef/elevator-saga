@@ -119,7 +119,19 @@
             });
 
             elevator.on("passing_floor", function(floorNum, direction) {
-                console.log('Event: passing_floor ' + floorNum + " " + direction);
+                if (elevator.state === elevatorState.GOING_UP) {
+                    var index = upFloors.indexOf(floorNum);
+                    if (index > -1){
+                        upFloors.splice(index, 1);
+                        elevator.goToFloor(floorNum, true);
+                    }
+                } else if (elevator.state === elevatorState.GOING_DOWN) {
+                    var index = downFloors.indexOf(floorNum);
+                    if (index > -1){
+                        downFloors.splice(index, 1);
+                        elevator.goToFloor(floorNum, true);
+                    }
+                }
             });
 
             elevator.on("floor_button_pressed", function(floorNum) {
