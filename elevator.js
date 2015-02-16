@@ -58,6 +58,7 @@
             };
 
             elevator.prioritizeDestinationQueue = function () {
+                // Keeps the destination queue sorted based on the current elevator state.
                 elevator.destinationQueue = _.uniq(elevator.destinationQueue);
                 elevator.destinationQueue.sort();
                 if (elevator.state == elevatorState.GOING_DOWN){
@@ -66,7 +67,7 @@
                 elevator.checkDestinationQueue();
             };
 
-            elevator.pushToQueue = function (floorNum) {
+            elevator.pushToDestinationQueue = function (floorNum) {
                 elevator.destinationQueue.push(floorNum);
                 elevator.prioritizeDestinationQueue();
             };
@@ -135,7 +136,7 @@
             });
 
             elevator.on("floor_button_pressed", function(floorNum) {
-                elevator.pushToQueue(floorNum);
+                elevator.pushToDestinationQueue(floorNum);
             });
         });
 
