@@ -122,17 +122,19 @@
             });
 
             elevator.on("passing_floor", function(floorNum, direction) {
-                if (elevator.state === elevatorState.GOING_UP) {
-                    var index = upFloors.indexOf(floorNum);
-                    if (index > -1){
-                        upFloors.splice(index, 1);
-                        elevator.goToFloor(floorNum, true);
-                    }
-                } else if (elevator.state === elevatorState.GOING_DOWN) {
-                    var index = downFloors.indexOf(floorNum);
-                    if (index > -1){
-                        downFloors.splice(index, 1);
-                        elevator.goToFloor(floorNum, true);
+                if (elevator.loadFactor() <= 0.7){
+                    if (elevator.state === elevatorState.GOING_UP) {
+                        var index = upFloors.indexOf(floorNum);
+                        if (index > -1){
+                            upFloors.splice(index, 1);
+                            elevator.goToFloor(floorNum, true);
+                        }
+                    } else if (elevator.state === elevatorState.GOING_DOWN) {
+                        var index = downFloors.indexOf(floorNum);
+                        if (index > -1){
+                            downFloors.splice(index, 1);
+                            elevator.goToFloor(floorNum, true);
+                        }
                     }
                 }
             });
