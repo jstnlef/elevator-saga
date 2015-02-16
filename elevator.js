@@ -78,17 +78,17 @@
                 var downFloor = downFloors[0];
                 if (upFloor !== undefined && downFloor === undefined) {
                     elevator.setState(elevatorState.GOING_UP);
-                    elevator.goToFloor(upFloor);
+                    elevator.goToFloor(upFloors.shift());
                 } else if (upFloor === undefined && downFloor !== undefined) {
                     elevator.setState(elevatorState.GOING_DOWN);
-                    elevator.goToFloor(downFloor);
+                    elevator.goToFloor(downFloors.shift());
                 } else if (upFloor !== undefined && downFloor !== undefined) {
                     if (distanceTo(currentFloor, upFloor) >= distanceTo(currentFloor, downFloor)) {
                         elevator.setState(elevatorState.GOING_DOWN);
-                        elevator.goToFloor(downFloor);
+                        elevator.goToFloor(downFloors.shift());
                     } else {
                         elevator.setState(elevatorState.GOING_UP);
-                        elevator.goToFloor(upFloor);
+                        elevator.goToFloor(upFloors.shift());
                     }
                 } else {
                     elevator.setState(elevatorState.IDLE);
