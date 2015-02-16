@@ -31,6 +31,10 @@
             }
         }
 
+        var distanceTo = function (from, to) {
+            return Math.abs(from - to);
+        }
+
         elevators.forEach(function (elevator, index) {
             elevator.state = elevatorState.IDLE;
             elevator.id = index;
@@ -71,12 +75,20 @@
                 var currentFloor = elevator.currentFloor();
                 var upFloor = upFloors[0];
                 var downFloor = downFloors[0];
-                if (upFloor !== undefined){
+                if (upFloor !== undefined && downFloor === undefined) {
                     elevator.setState(elevatorState.GOING_UP);
                     elevator.goToFloor(upFloor);
-                } else if (downFloor !== undefined){
+                } else if (upFloor === undefined && downFloor !== undefined) {
                     elevator.setState(elevatorState.GOING_DOWN);
                     elevator.goToFloor(downFloor);
+                } else if (upFloor !== undefined && downFloor !== undefined) {
+                    if (distanceTo(currentFloor, upFloor) >= distanceTo(currentFloor, downFloor)) {
+                        elevator.setState(elevatorState.GOING_DOWN);
+                        elevator.goToFloor(downFloor);
+                    } else {
+                        elevator.setState(elevatorState.GOING_UP);
+                        elevator.goToFloor(upFloor);
+                    }
                 } else {
                     elevator.setState(elevatorState.IDLE);
                     elevator.goToFloor(currentFloor);
@@ -85,13 +97,10 @@
 
             elevator.on("stopped_at_floor", function(floorNum) {
                 console.log('Event: stopped_at_floor');
-                // Reprioritize the destination queue
-                // elevator.prioritizeDestinationQueue();
-
-                console.log("Destination queue: " + elevator.destinationQueue);
                 console.log("upFloors queue: " + upFloors);
                 console.log("downFloors queue: " + downFloors);
-                console.log('Elevator State: ' + elevator.state);
+                console.log("Elevator " + elevator.id + " destination queue: " + elevator.destinationQueue);
+                console.log("Elevator " + elevator.id + " state: " + elevator.state);
 
                 var currentFloor = elevator.currentFloor();
                 var upIndex = upFloors.indexOf(currentFloor);
@@ -107,6 +116,10 @@
                     elevator.setState(elevatorState.GOING_DOWN);
                     return
                 }
+            });
+
+            elevator.on("passing_floor", function(floorNum, direction) {
+                console.log('Event: passing_floor ' + floorNum + " " + direction);
             });
 
             elevator.on("floor_button_pressed", function(floorNum) {
