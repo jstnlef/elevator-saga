@@ -18,16 +18,18 @@
         var upFloors = [];
         var downFloors = [];
 
+        var numSort = function(a, b){ return a - b; };
+        var reverseNumSort = function(a, b){ return b - a; };
+
         var updateFloorButtonState = function (dir, floorNum){
             if (dir === direction.UP){
                 upFloors.push(floorNum);
                 upFloors = _.uniq(upFloors);
-                upFloors.sort();
+                upFloors.sort(numSort);
             } else if (dir === direction.DOWN){
                 downFloors.push(floorNum)
                 downFloors = _.uniq(downFloors);
-                downFloors.sort();
-                downFloors.reverse();
+                downFloors.sort(reverseNumSort);
             }
         }
 
@@ -60,7 +62,7 @@
             elevator.prioritizeDestinationQueue = function () {
                 // Keeps the destination queue sorted based on the current elevator state.
                 elevator.destinationQueue = _.uniq(elevator.destinationQueue);
-                elevator.destinationQueue.sort();
+                elevator.destinationQueue.sort(numSort);
                 if (elevator.state == elevatorState.GOING_DOWN){
                     elevator.destinationQueue.reverse();
                 }
