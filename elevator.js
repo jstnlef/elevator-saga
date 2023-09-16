@@ -15,7 +15,6 @@
                     break;
             }
             floorState[floorNum] |= x;
-            console.log("floorState: " + JSON.stringify(floorState));
         }
 
         var removeFloorRequest = function (dir, floorNum) {
@@ -31,7 +30,28 @@
                     break;
             }
             floorState[floorNum] &= x;
-            console.log("floorState: " + JSON.stringify(floorState));
+        }
+
+        var findNearestWaitingFloor = function (floorNum) {
+            var i = 0;
+            while (true) {
+                var up = floorNum + i;
+                var down = floorNum - i;
+                if (up > floorState.length - 1 && down < 0) {
+                    // We couldn't find one. Guess we should just wait here.
+                    return floorNum;
+                }
+
+                if (up < floorState.length && floorState[up] > 0) {
+                    return up;
+                }
+
+                if (down >= 0 && floorState[down] > 0) {
+                    return down;
+                }
+
+                i++;
+            }
         }
 
         elevators.forEach(function (elevator, index) {
@@ -62,15 +82,13 @@
 
             elevator.on("idle", function () {
                 console.log("Elevator " + elevator.id + " : idle");
-                console.log("Pressed Floors: " + JSON.stringify(elevator.getPressedFloors()));
-                var pressedFloors = elevator.getPressedFloors();
-                if (pressedFloors.length > 0) {
-                    elevator.goToFloor(pressedFloors[0]);
-                }
+                var destination = findNearestWaitingFloor(elevator.currentFloor());
+                elevator.goToFloor(destination);
             });
 
             elevator.on("floor_button_pressed", function (floorNum) {
                 console.log("Elevator " + elevator.id + " floor_button_pressed: " + floorNum);
+                elevator.goToFloor(floorNum);
             });
 
             elevator.on("passing_floor", function (floorNum, direction) {
@@ -78,13 +96,14 @@
             });
 
             elevator.on("stopped_at_floor", function (floorNum) {
-                console.log("Elevator " + elevator.id + " stopped_at_floor: " + floorNum);
+                // Manage floor state
                 if (elevator.goingUpIndicator) {
                     removeFloorRequest("up", floorNum);
                 }
                 if (elevator.goingDownIndicator) {
                     removeFloorRequest("down", floorNum);
                 }
+                console.log("Elevator " + elevator.id + " stopped_at_floor: " + floorNum + " floorState: " + JSON.stringify(floorState));
             });
         });
 
