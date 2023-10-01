@@ -123,7 +123,7 @@
                 console.log("Elevator " + elevator.id + " floor_button_pressed: " + floorNum);
                 elevator.goToFloor(floorNum);
                 var destinations = elevator.destinationQueue;
-                destinations.sort();
+                destinations.sort(function (a, b) { return a - b; });
                 if (elevator.direction == "down") {
                     destinations.reverse();
                 }
