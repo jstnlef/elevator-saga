@@ -97,6 +97,9 @@
 
             elevator.on("passing_floor", function (floorNum, direction) {
                 // console.log("Elevator " + elevator.id + " passing_floor: " + floorNum + " " + direction);
+                if (elevator.loadFactor() < 0.7 && floorState[floorNum] > 0) {
+                    elevator.goToFloor(floorNum, true);
+                }
             });
 
             elevator.on("stopped_at_floor", function (floorNum) {
