@@ -1,157 +1,163 @@
-// Solution for elevator saga
 {
     init: function (elevators, floors) {
-        var direction = {
-            UP: "up",
-            DOWN: "down",
-        };
-        Object.freeze(direction);
+        var floorState = Array(floors.length).fill(0);
 
-        var elevatorState = {
-            GOING_UP: "goingUp",
-            GOING_DOWN: "goingDown",
-            IDLE: "idle"
-        };
-        Object.freeze(elevatorState);
-
-        // TODO: Implement a sortedSet. For now I'll just make sure to call _.uniq and sort()
-        var upFloors = [];
-        var downFloors = [];
-
-        var numSort = function(a, b){ return a - b; };
-        var reverseNumSort = function(a, b){ return b - a; };
-
-        var updateFloorButtonState = function (dir, floorNum){
-            if (dir === direction.UP){
-                upFloors.push(floorNum);
-                upFloors = _.uniq(upFloors);
-                upFloors.sort(numSort);
-            } else if (dir === direction.DOWN){
-                downFloors.push(floorNum)
-                downFloors = _.uniq(downFloors);
-                downFloors.sort(reverseNumSort);
+        var addFloorRequest = function (dir, floorNum) {
+            var x = 0;
+            switch (dir) {
+                case "up":
+                    x = 1;
+                    break;
+                case "down":
+                    x = 2;
+                    break;
+                default:
+                    break;
             }
+            floorState[floorNum] |= x;
+        };
+
+        var removeFloorRequest = function (dir, floorNum) {
+            var x = 0;
+            switch (dir) {
+                case "up":
+                    x = 2;
+                    break;
+                case "down":
+                    x = 1;
+                    break;
+                default:
+                    break;
+            }
+            floorState[floorNum] &= x;
+        };
+
+        var floorHasDirectionRequest = function (dir, floorNum) {
+            switch (dir) {
+                case "up":
+                    return (floorState[floorNum] & 1) == 1;
+                case "down":
+                    return (floorState[floorNum] & 2) == 2;
+                default:
+                    return false;
+            }
+        };
+
+        var directionFromFloorState = function (floorNum) {
+            if ((floorState[floorNum] & 1) == 1) {
+                return "up";
+            }
+            if ((floorState[floorNum] & 2) == 2) {
+                return "down";
+            }
+            return "idle"
         }
 
-        var distanceTo = function (from, to) {
-            return Math.abs(from - to);
-        }
+        var findNearestWaitingFloor = function (floorNum) {
+            var peopleAreWaiting = function (f) {
+                return f < floorState.length && floorState[f] > 0;
+            }
+            var i = 0;
+            while (true) {
+                var up = floorNum + i;
+                var down = floorNum - i;
+                if (up > floorState.length - 1 && down < 0) {
+                    // We couldn't find one. Guess we should just wait here.
+                    return [floorNum, "idle"];
+                }
+
+                if (peopleAreWaiting(up)) {
+                    return [up, directionFromFloorState(up)];
+                }
+
+                if (peopleAreWaiting(down)) {
+                    return [down, directionFromFloorState(down)];
+                }
+
+                i++;
+            }
+        };
 
         elevators.forEach(function (elevator, index) {
-            elevator.state = elevatorState.IDLE;
             elevator.id = index;
 
-            elevator.setState = function (state) {
-                console.log("Setting elevator " + elevator.id + " state: " + state);
-                if (state === elevatorState.GOING_UP) {
-                    elevator.goingUpIndicator(true);
-                    elevator.goingDownIndicator(false);
-                    elevator.state = elevatorState.GOING_UP;
-                } else if (state === elevatorState.GOING_DOWN) {
-                    elevator.goingUpIndicator(false);
-                    elevator.goingDownIndicator(true);
-                    elevator.state = elevatorState.GOING_DOWN;
-                } else {
-                    elevator.goingUpIndicator(false);
-                    elevator.goingDownIndicator(false);
-                    elevator.state = elevatorState.IDLE;
-                }
+            elevator.setIndicator = function (dir) {
+                var up = elevator.goingUpIndicator();
+                var down = elevator.goingDownIndicator();
+                switch (dir) {
+                    case "up":
+                        up = true;
+                        down = false;
+                        break;
+                    case "down":
+                        up = false;
+                        down = true;
+                        break;
+                    case "idle":
+                        up = false;
+                        down = false;
+                    default:
+                        break;
 
+                }
+                elevator.goingUpIndicator(up);
+                elevator.goingDownIndicator(down);
             };
 
-            elevator.prioritizeDestinationQueue = function () {
-                // Keeps the destination queue sorted based on the current elevator state.
-                elevator.destinationQueue = _.uniq(elevator.destinationQueue);
-                elevator.destinationQueue.sort(numSort);
-                if (elevator.state == elevatorState.GOING_DOWN){
-                    elevator.destinationQueue.reverse();
+            elevator.setDirection = function (dir) {
+                elevator.direction = dir;
+                elevator.setIndicator(dir);
+            };
+
+            elevator.setDirection("up");
+
+            elevator.on("idle", function () {
+                console.log("Elevator " + elevator.id + " : idle");
+                var [destination, direction] = findNearestWaitingFloor(elevator.currentFloor());
+                console.log("Elevator " + elevator.id + " : destination: " + destination + " direction: " + direction);
+                elevator.setDirection(direction);
+                elevator.goToFloor(destination);
+            });
+
+            elevator.on("floor_button_pressed", function (floorNum) {
+                console.log("Elevator " + elevator.id + " floor_button_pressed: " + floorNum);
+                elevator.goToFloor(floorNum);
+                var destinations = elevator.destinationQueue;
+                destinations.sort(function (a, b) { return a - b; });
+                if (elevator.direction == "down") {
+                    destinations.reverse();
                 }
                 elevator.checkDestinationQueue();
-            };
+                console.log("Elevator " + elevator.id + " destinationQueue: " + JSON.stringify(destinations));
+            });
 
-            elevator.pushToDestinationQueue = function (floorNum) {
-                elevator.destinationQueue.push(floorNum);
-                elevator.prioritizeDestinationQueue();
-            };
-
-            elevator.on("idle", function() {
-                var currentFloor = elevator.currentFloor();
-                var upFloor = upFloors[0];
-                var downFloor = downFloors[0];
-                if (upFloor !== undefined && downFloor === undefined) {
-                    elevator.setState(elevatorState.GOING_UP);
-                    elevator.goToFloor(upFloors.shift());
-                } else if (upFloor === undefined && downFloor !== undefined) {
-                    elevator.setState(elevatorState.GOING_DOWN);
-                    elevator.goToFloor(downFloors.shift());
-                } else if (upFloor !== undefined && downFloor !== undefined) {
-                    if (distanceTo(currentFloor, upFloor) >= distanceTo(currentFloor, downFloor)) {
-                        elevator.setState(elevatorState.GOING_DOWN);
-                        elevator.goToFloor(downFloors.shift());
-                    } else {
-                        elevator.setState(elevatorState.GOING_UP);
-                        elevator.goToFloor(upFloors.shift());
-                    }
-                } else {
-                    elevator.setState(elevatorState.IDLE);
-                    elevator.goToFloor(currentFloor);
+            elevator.on("passing_floor", function (floorNum, direction) {
+                // console.log("Elevator " + elevator.id + " passing_floor: " + floorNum + " " + direction);
+                if (elevator.loadFactor() < 0.7 && floorHasDirectionRequest(direction, floorNum) && elevator.direction == direction) {
+                    elevator.goToFloor(floorNum, true);
                 }
             });
 
-            elevator.on("stopped_at_floor", function(floorNum) {
-                console.log('Event: stopped_at_floor');
-                console.log("upFloors queue: " + upFloors);
-                console.log("downFloors queue: " + downFloors);
-                console.log("Elevator " + elevator.id + " destination queue: " + elevator.destinationQueue);
-                console.log("Elevator " + elevator.id + " state: " + elevator.state);
-
-                var currentFloor = elevator.currentFloor();
-                var upIndex = upFloors.indexOf(currentFloor);
-                if (upIndex > -1) {
-                    upFloors.splice(upIndex, 1);
-                    elevator.setState(elevatorState.GOING_UP);
-                    return
+            elevator.on("stopped_at_floor", function (floorNum) {
+                // Manage floor state
+                if (elevator.goingUpIndicator()) {
+                    removeFloorRequest("up", floorNum);
                 }
-
-                var downIndex = downFloors.indexOf(currentFloor);
-                if (downIndex > -1) {
-                    downFloors.splice(downIndex, 1);
-                    elevator.setState(elevatorState.GOING_DOWN);
-                    return
+                if (elevator.goingDownIndicator()) {
+                    removeFloorRequest("down", floorNum);
                 }
-            });
-
-            elevator.on("passing_floor", function(floorNum, direction) {
-                if (elevator.loadFactor() <= 0.7){
-                    if (elevator.state === elevatorState.GOING_UP) {
-                        var index = upFloors.indexOf(floorNum);
-                        if (index > -1){
-                            upFloors.splice(index, 1);
-                            elevator.goToFloor(floorNum, true);
-                        }
-                    } else if (elevator.state === elevatorState.GOING_DOWN) {
-                        var index = downFloors.indexOf(floorNum);
-                        if (index > -1){
-                            downFloors.splice(index, 1);
-                            elevator.goToFloor(floorNum, true);
-                        }
-                    }
-                }
-            });
-
-            elevator.on("floor_button_pressed", function(floorNum) {
-                elevator.pushToDestinationQueue(floorNum);
+                console.log("Elevator " + elevator.id + " stopped_at_floor: " + floorNum + " floorState: " + JSON.stringify(floorState));
             });
         });
 
         floors.forEach(function (floor) {
-            floor.on("up_button_pressed", function() {
-                updateFloorButtonState(direction.UP, floor.floorNum());
+            floor.on("up_button_pressed", function () {
+                addFloorRequest("up", floor.floorNum());
             });
-            floor.on("down_button_pressed", function() {
-                updateFloorButtonState(direction.DOWN, floor.floorNum());
+            floor.on("down_button_pressed", function () {
+                addFloorRequest("down", floor.floorNum());
             });
         });
     },
-    update: function(dt, elevators, floors) {}
+    update: function(dt, elevators, floors) { }
 }
