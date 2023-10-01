@@ -89,10 +89,14 @@
             elevator.on("floor_button_pressed", function (floorNum) {
                 console.log("Elevator " + elevator.id + " floor_button_pressed: " + floorNum);
                 elevator.goToFloor(floorNum);
+                var destinations = elevator.destinationQueue;
+                destinations.sort();
+                elevator.checkDestinationQueue();
+                console.log("Elevator " + elevator.id + " destinationQueue: " + JSON.stringify(destinations));
             });
 
             elevator.on("passing_floor", function (floorNum, direction) {
-                console.log("Elevator " + elevator.id + " passing_floor: " + floorNum + " " + direction);
+                // console.log("Elevator " + elevator.id + " passing_floor: " + floorNum + " " + direction);
             });
 
             elevator.on("stopped_at_floor", function (floorNum) {
